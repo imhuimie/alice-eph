@@ -13,6 +13,14 @@ export default function Home() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'instances' | 'plans' | 'user'>('instances');
+  const [showDeployModal, setShowDeployModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [deployForm, setDeployForm] = useState({
+    os_id: '',
+    time: '168',
+    sshKey: '',
+  });
+  const [availableOS, setAvailableOS] = useState<{ group_name: string; os_list: { id: number; name: string }[] }[]>([]);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('alice_api_token');
@@ -132,6 +140,52 @@ export default function Home() {
       fetchInstances();
     } catch (error) {
       alert('销毁失败: ' + (error instanceof Error ? error.message : '未知错误'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchOSForPlan = async (planId: number) => {
+    try {
+      const data = await apiRequest('/Evo/getOSByPlan', {
+        method: 'POST',
+        body: { plan_id: planId.toString() },
+      });
+      setAvailableOS(data.data || []);
+    } catch (error) {
+      console.error('获取操作系统失败:', error);
+      alert('获取操作系统列表失败');
+      setAvailableOS([]);
+    }
+  };
+
+  const handleDeployInstance = async () => {
+    if (!deployForm.os_id || !selectedPlan) {
+      alert('请选择操作系统');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await apiRequest('/Evo/Deploy', {
+        method: 'POST',
+        body: {
+          product_id: selectedPlan.id.toString(),
+          os_id: deployForm.os_id,
+          time: deployForm.time,
+          ...(deployForm.sshKey && { sshKey: deployForm.sshKey }),
+        },
+      });
+
+      alert(`部署成功！\n主机名: ${data.data.hostname}\nIPv4: ${data.data.ipv4}\n密码: ${data.data.password}\n\n请妥善保存密码信息！`);
+      
+      setShowDeployModal(false);
+      setSelectedPlan(null);
+      setDeployForm({ os_id: '', time: '168', sshKey: '' });
+      setActiveTab('instances');
+      fetchInstances();
+    } catch (error) {
+      alert('部署失败: ' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setLoading(false);
     }
@@ -316,10 +370,15 @@ export default function Home() {
                   <p className="text-sm"><span className="font-medium">网络:</span> {plan.network_speed}</p>
                 </div>
                 <button
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                  onClick={() => alert('部署功能开发中')}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  onClick={() => {
+                    setSelectedPlan(plan);
+                    fetchOSForPlan(plan.id);
+                    setShowDeployModal(true);
+                  }}
+                  disabled={plan.stock === 0}
                 >
-                  部署实例
+                  {plan.stock === 0 ? '暂无库存' : '部署实例'}
                 </button>
               </div>
             ))}
@@ -344,6 +403,124 @@ export default function Home() {
                   ${(userInfo.credit / 10000).toFixed(4)} USD
                 </p>
                 <p className="text-xs text-gray-400">{userInfo.credit} credits</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDeployModal && selectedPlan && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900">部署实例 - {selectedPlan.name}</h2>
+                  <button
+                    onClick={() => {
+                      setShowDeployModal(false);
+                      setSelectedPlan(null);
+                      setDeployForm({ os_id: '', time: '168', sshKey: '' });
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold mb-2">方案配置</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <p><span className="text-gray-600">CPU:</span> {selectedPlan.cpu} 核心</p>
+                    <p><span className="text-gray-600">内存:</span> {selectedPlan.memory} MB</p>
+                    <p><span className="text-gray-600">硬盘:</span> {selectedPlan.disk} GB</p>
+                    <p><span className="text-gray-600">网络:</span> {selectedPlan.network_speed}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      选择操作系统 *
+                    </label>
+                    {availableOS.length === 0 ? (
+                      <p className="text-sm text-gray-500">加载中...</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {availableOS.map((group) => (
+                          <div key={group.group_name}>
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">{group.group_name}</h4>
+                            <div className="space-y-2">
+                              {group.os_list.map((os) => (
+                                <label key={os.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name="os"
+                                    value={os.id}
+                                    checked={deployForm.os_id === os.id.toString()}
+                                    onChange={(e) => setDeployForm({ ...deployForm, os_id: e.target.value })}
+                                    className="mr-3"
+                                  />
+                                  <span className="text-sm">{os.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      租用时长(小时) *
+                    </label>
+                    <select
+                      value={deployForm.time}
+                      onChange={(e) => setDeployForm({ ...deployForm, time: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="24">1天 (24小时)</option>
+                      <option value="72">3天 (72小时)</option>
+                      <option value="168">1周 (168小时)</option>
+                      <option value="336">2周 (336小时)</option>
+                      <option value="720">1个月 (720小时)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SSH密钥 ID (可选)
+                    </label>
+                    <input
+                      type="text"
+                      value={deployForm.sshKey}
+                      onChange={(e) => setDeployForm({ ...deployForm, sshKey: e.target.value })}
+                      placeholder="留空则不使用SSH密钥"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeployModal(false);
+                      setSelectedPlan(null);
+                      setDeployForm({ os_id: '', time: '168', sshKey: '' });
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleDeployInstance}
+                    disabled={!deployForm.os_id || loading}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {loading ? '部署中...' : '确认部署'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
