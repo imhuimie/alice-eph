@@ -332,7 +332,7 @@ export default function Home() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">到期时间</p>
-                      <p className="text-sm">{new Date(instance.expiration_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</p>
+                      <p className="text-sm">{new Date(instance.expiration_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</p>
                     </div>
                   </div>
 
