@@ -1,6 +1,5 @@
 /**
  * Alice.ws API Client - Cloudflare Workers 版本
- * 基于原 api_client.go 转换而来
  */
 
 const BASE_URL = 'https://app.alice.ws/cli/v1';
@@ -1990,3 +1989,4 @@ export default {
     }
   },
 };
+
