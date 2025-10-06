@@ -475,17 +475,17 @@ export default function Home() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       租用时长(小时) *
                     </label>
-                    <select
+                    <input
+                      type="number"
+                      min="1"
                       value={deployForm.time}
                       onChange={(e) => setDeployForm({ ...deployForm, time: e.target.value })}
+                      placeholder="请输入租用小时数"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="24">1天 (24小时)</option>
-                      <option value="72">3天 (72小时)</option>
-                      <option value="168">1周 (168小时)</option>
-                      <option value="336">2周 (336小时)</option>
-                      <option value="720">1个月 (720小时)</option>
-                    </select>
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      常用时长参考: 24小时(1天) / 168小时(1周) / 720小时(1个月)
+                    </p>
                   </div>
 
                   <div>
