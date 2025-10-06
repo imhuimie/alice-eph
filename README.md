@@ -65,7 +65,7 @@ const response = await fetch('/api/alice/instances', {
   }
 });
 const data = await response.json();
-```
+
 
 // 调用方法
 const instances = await client.listInstances();
