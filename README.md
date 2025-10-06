@@ -49,6 +49,36 @@ npm run build
 npm start
 ```
 
+## 🌐 Cloudflare Workers 部署
+
+项目提供了 `cf.js` 文件，可以直接部署到 Cloudflare Workers，提供一个无需服务器的 Web 管理界面。
+
+### 部署步骤
+
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
+2. 进入 Workers & Pages
+3. 创建新的 Worker
+4. 将 `cf.js` 的内容复制粘贴到 Worker 编辑器
+5. 点击"保存并部署"
+
+### 使用方法
+
+部署完成后，访问 Worker URL 即可看到交互式管理界面：
+
+- **首次使用**：在界面中输入您的 API Token (格式: `client_id:secret`)
+- **功能**：支持实例管理、方案查询、用户信息查看等所有 API 功能
+- **优势**：完全基于浏览器，无需本地环境，支持移动端访问
+
+### API 代理
+
+cf.js 也可作为 API 代理使用，支持所有原生 API 端点：
+
+```bash
+# 通过 Workers 调用 API
+curl https://your-worker.workers.dev/api/Evo/Instance \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
 ## 📖 API 使用
 
 > **获取凭证**: 所有 API 请求都需要认证。您可以从 Alice.ws 控制面板的 API 设置中获取 Client ID 和 Secret 来生成 API Token。
