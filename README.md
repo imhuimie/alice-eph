@@ -59,7 +59,7 @@ npm start
 
 ```typescript
 // 示例: 获取实例列表
-const response = await fetch('/api/alice/instances', {
+const response = await fetch('/api/instances', {
   headers: {
     'Authorization': 'Bearer YOUR_API_TOKEN'
   }
@@ -97,20 +97,20 @@ alice-eph/
 | 方法   | 端点                            | 描述                     |
 | ------ | ------------------------------- | ------------------------ |
 | **实例管理** |                                 |                          |
-| GET    | `/api/alice/instances`          | 获取所有实例             |
-| POST   | `/api/alice/instances`          | 部署新实例               |
-| DELETE | `/api/alice/instances/{id}`     | 销毁实例                 |
-| POST   | `/api/alice/instances/{id}/power` | 电源操作                 |
-| POST   | `/api/alice/instances/{id}/rebuild`| 重建实例                 |
-| POST   | `/api/alice/instances/{id}/renew` | 续订实例                 |
-| GET    | `/api/alice/instances/{id}/state` | 获取实例状态             |
+| GET    | `/api/instances`                | 获取所有实例             |
+| POST   | `/api/instances`                | 部署新实例               |
+| DELETE | `/api/instances/{id}`           | 销毁实例                 |
+| POST   | `/api/instances/{id}/power`     | 电源操作                 |
+| POST   | `/api/instances/{id}/rebuild`   | 重建实例                 |
+| POST   | `/api/instances/{id}/renew`     | 续订实例                 |
+| GET    | `/api/instances/{id}/state`     | 获取实例状态             |
 | **方案管理** |                                 |                          |
-| GET    | `/api/alice/plans`              | 获取可用方案             |
-| GET    | `/api/alice/plans/{id}/os`      | 获取方案的可用操作系统   |
+| GET    | `/api/plans`                    | 获取可用方案             |
+| GET    | `/api/plans/{id}/os`            | 获取方案的可用操作系统   |
 | **用户管理** |                                 |                          |
-| GET    | `/api/alice/user/info`          | 获取用户信息             |
-| GET    | `/api/alice/user/sshkeys`       | 获取SSH密钥列表          |
-| GET    | `/api/alice/user/permissions`   | 获取EVO权限              |
+| GET    | `/api/user/info`                | 获取用户信息             |
+| GET    | `/api/user/sshkeys`             | 获取SSH密钥列表          |
+| GET    | `/api/user/permissions`         | 获取EVO权限              |
 
 </details>
 

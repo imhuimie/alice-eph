@@ -1,16 +1,16 @@
 # Alice EVO API 文档
 
-本文档描述了 Alice EVO 服务的所有可用 API 端点。
+本文档描述了 Alice EVO 服务的所有可用API 端点
 
 ## 认证
 
-所有 API 请求需要在请求头中包含 Bearer Token:
+所有API 请求需要在请求头中包含 Bearer Token:
 
 ```
 Authorization: Bearer YOUR_API_TOKEN
 ```
 
-API Token 格式为: `ClientID:Secret`
+API Token 格式: `ClientID:Secret`
 
 ## 基础 URL
 
@@ -24,7 +24,7 @@ https://your-domain.com/api/alice
 
 ### 1. 获取所有实例
 
-**端点:** `GET /api/alice/instances`
+**端点:** `GET /api/instances`
 
 **描述:** 获取用户的所有实例列表
 
@@ -49,9 +49,9 @@ https://your-domain.com/api/alice
 
 ### 2. 部署新实例
 
-**端点:** `POST /api/alice/instances`
+**端点:** `POST /api/instances`
 
-**请求体:**
+**请求示例**
 ```json
 {
   "product_id": "1",
@@ -77,21 +77,21 @@ https://your-domain.com/api/alice
 
 ### 3. 销毁实例
 
-**端点:** `DELETE /api/alice/instances/{id}`
+**端点:** `DELETE /api/instances/{id}`
 
 **响应示例:**
 ```json
 {
   "success": true,
-  "message": "实例已成功销毁"
+  "message": "实例已成功销毁
 }
 ```
 
 ### 4. 执行电源操作
 
-**端点:** `POST /api/alice/instances/{id}/power`
+**端点:** `POST /api/instances/{id}/power`
 
-**请求体:**
+**请求示例**
 ```json
 {
   "action": "restart" // boot, shutdown, restart, poweroff
@@ -102,15 +102,15 @@ https://your-domain.com/api/alice
 ```json
 {
   "success": true,
-  "message": "电源操作已执行"
+  "message": "电源操作已执行
 }
 ```
 
 ### 5. 重建实例
 
-**端点:** `POST /api/alice/instances/{id}/rebuild`
+**端点:** `POST /api/instances/{id}/rebuild`
 
-**请求体:**
+**请求示例**
 ```json
 {
   "os": "10",
@@ -133,12 +133,12 @@ https://your-domain.com/api/alice
 
 ### 6. 续订实例
 
-**端点:** `POST /api/alice/instances/{id}/renew`
+**端点:** `POST /api/instances/{id}/renew`
 
-**请求体:**
+**请求示例**
 ```json
 {
-  "time": "168" // 续订时长(小时)
+  "time": "24" // 续订时长(小时)
 }
 ```
 
@@ -148,15 +148,15 @@ https://your-domain.com/api/alice
   "success": true,
   "data": {
     "expiration_at": "2025-01-15 12:00:00",
-    "added_hours": "168",
+    "added_hours": "24",
     "total_service_hours": 336
   }
 }
 ```
 
-### 7. 获取实例状态
+### 7. 获取实例状�?
 
-**端点:** `GET /api/alice/instances/{id}/state`
+**端点:** `GET /api/instances/{id}/state`
 
 **响应示例:**
 ```json
@@ -193,7 +193,7 @@ https://your-domain.com/api/alice
 
 ### 8. 获取所有可用方案
 
-**端点:** `GET /api/alice/plans`
+**端点:** `GET /api/plans`
 
 **响应示例:**
 ```json
@@ -226,7 +226,7 @@ https://your-domain.com/api/alice
 
 ### 9. 根据方案获取可用操作系统
 
-**端点:** `GET /api/alice/plans/{id}/os`
+**端点:** `GET /api/plans/{id}/os`
 
 **响应示例:**
 ```json
@@ -256,7 +256,7 @@ https://your-domain.com/api/alice
 
 ### 10. 获取用户SSH密钥列表
 
-**端点:** `GET /api/alice/user/sshkeys`
+**端点:** `GET /api/user/sshkeys`
 
 **响应示例:**
 ```json
@@ -275,7 +275,7 @@ https://your-domain.com/api/alice
 
 ### 11. 获取用户EVO权限
 
-**端点:** `GET /api/alice/user/permissions`
+**端点:** `GET /api/user/permissions`
 
 **响应示例:**
 ```json
@@ -292,7 +292,7 @@ https://your-domain.com/api/alice
 
 ### 12. 获取用户信息
 
-**端点:** `GET /api/alice/user/info`
+**端点:** `GET /api/user/info`
 
 **响应示例:**
 ```json
@@ -323,7 +323,7 @@ https://your-domain.com/api/alice
 常见 HTTP 状态码:
 - `200` - 请求成功
 - `400` - 请求参数错误
-- `401` - 未授权(Token 无效或缺失)
+- `401` - 未授权Token 无效或缺失
 - `404` - 资源未找到
 - `500` - 服务器内部错误
 
@@ -336,7 +336,7 @@ https://your-domain.com/api/alice
 ```typescript
 // 使用 fetch API
 async function listInstances(token: string) {
-  const response = await fetch('/api/alice/instances', {
+  const response = await fetch('/api/instances', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -348,7 +348,7 @@ async function listInstances(token: string) {
 
 // 部署新实例
 async function deployInstance(token: string, params: DeployParams) {
-  const response = await fetch('/api/alice/instances', {
+  const response = await fetch('/api/instances', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -366,11 +366,11 @@ async function deployInstance(token: string, params: DeployParams) {
 
 ```bash
 # 获取实例列表
-curl -X GET https://your-domain.com/api/alice/instances \
+curl -X GET https://your-domain.com/api/instances \
   -H "Authorization: Bearer YOUR_API_TOKEN"
 
 # 部署新实例
-curl -X POST https://your-domain.com/api/alice/instances \
+curl -X POST https://your-domain.com/api/instances \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -385,7 +385,7 @@ curl -X POST https://your-domain.com/api/alice/instances \
 ## 注意事项
 
 1. 所有时间相关的参数单位都是小时
-2. API Token 需要妥善保管,不要暴露在客户端代码中
+2. API Token 需要妥善保管不要暴露在客户端代码内
 3. 建议使用环境变量存储 API Token
 4. 部署和重建操作会返回新的随机密码,请及时保存
 5. 实例 ID 在销毁后不可恢复

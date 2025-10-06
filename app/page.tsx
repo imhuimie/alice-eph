@@ -54,7 +54,7 @@ export default function Home() {
   const apiRequest = async (endpoint: string, options: { method?: string; body?: Record<string, string> } = {}) => {
     const { method = 'GET', body } = options;
     
-    const response = await fetch('/api/alice/proxy', {
+    const response = await fetch('/api/proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`API 错误：状态码 ${response.status}, 响应体: ${text}`);
+      throw new Error(`API 错误：状态码 ${response.status}, 响应体 ${text}`);
     }
 
     const data = await response.json();
