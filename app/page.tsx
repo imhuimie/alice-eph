@@ -17,7 +17,7 @@ export default function Home() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [deployForm, setDeployForm] = useState({
     os_id: '',
-    time: '168',
+    time: '24',
     sshKey: '',
   });
   const [availableOS, setAvailableOS] = useState<{ group_name: string; os_list: { id: number; name: string }[] }[]>([]);
@@ -181,7 +181,7 @@ export default function Home() {
       
       setShowDeployModal(false);
       setSelectedPlan(null);
-      setDeployForm({ os_id: '', time: '168', sshKey: '' });
+                      setDeployForm({ os_id: '', time: '24', sshKey: '' });
       setActiveTab('instances');
       fetchInstances();
     } catch (error) {
@@ -418,7 +418,7 @@ export default function Home() {
                     onClick={() => {
                       setShowDeployModal(false);
                       setSelectedPlan(null);
-                      setDeployForm({ os_id: '', time: '168', sshKey: '' });
+                      setDeployForm({ os_id: '', time: '24', sshKey: '' });
                     }}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -507,7 +507,7 @@ export default function Home() {
                     onClick={() => {
                       setShowDeployModal(false);
                       setSelectedPlan(null);
-                      setDeployForm({ os_id: '', time: '168', sshKey: '' });
+                      setDeployForm({ os_id: '', time: '24', sshKey: '' });
                     }}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                   >
