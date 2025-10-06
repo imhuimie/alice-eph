@@ -21,6 +21,8 @@ export default function Home() {
     sshKey: '',
   });
   const [availableOS, setAvailableOS] = useState<{ group_name: string; os_list: { id: number; name: string }[] }[]>([]);
+  const [deployResult, setDeployResult] = useState<{ hostname: string; ipv4: string; password: string } | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('alice_api_token');
@@ -177,8 +179,12 @@ export default function Home() {
         },
       });
 
-      alert(`部署成功！\n主机名: ${data.data.hostname}\nIPv4: ${data.data.ipv4}\n密码: ${data.data.password}\n\n请妥善保存密码信息！`);
-      
+      setDeployResult({
+        hostname: data.data.hostname,
+        ipv4: data.data.ipv4,
+        password: data.data.password,
+      });
+      setShowResultModal(true);
       setShowDeployModal(false);
       setSelectedPlan(null);
                       setDeployForm({ os_id: '', time: '24', sshKey: '' });
@@ -403,6 +409,127 @@ export default function Home() {
                   ${(userInfo.credit / 10000).toFixed(4)} USD
                 </p>
                 <p className="text-xs text-gray-400">{userInfo.credit} credits</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showResultModal && deployResult && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold text-green-600">部署成功！</h2>
+                  <button
+                    onClick={() => {
+                      setShowResultModal(false);
+                      setDeployResult(null);
+                      setActiveTab('instances');
+                      fetchInstances();
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <p className="text-sm text-yellow-700">
+                      ⚠️ 请不要泄露以下信息
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">主机名</label>
+                      <div className="flex">
+                        <input
+                          type="text"
+                          value={deployResult.hostname}
+                          readOnly
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50 font-mono text-sm"
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(deployResult.hostname);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
+                        >
+                          复制
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">IPv4 地址</label>
+                      <div className="flex">
+                        <input
+                          type="text"
+                          value={deployResult.ipv4}
+                          readOnly
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50 font-mono text-sm"
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(deployResult.ipv4);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
+                        >
+                          复制
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Root 密码</label>
+                      <div className="flex">
+                        <input
+                          type="text"
+                          value={deployResult.password}
+                          readOnly
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50 font-mono text-sm"
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(deployResult.password);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
+                        >
+                          复制
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <button
+                        onClick={() => {
+                          const text = `主机名: ${deployResult.hostname}\nIPv4: ${deployResult.ipv4}\n密码: ${deployResult.password}`;
+                          navigator.clipboard.writeText(text);
+                        }}
+                        className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                      >
+                        复制全部信息
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowResultModal(false);
+                      setDeployResult(null);
+                      setActiveTab('instances');
+                      fetchInstances();
+                    }}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    查看实例列表
+                  </button>
+                </div>
               </div>
             </div>
           </div>
