@@ -21,7 +21,7 @@ export default function Home() {
     sshKey: '',
   });
   const [availableOS, setAvailableOS] = useState<{ group_name: string; os_list: { id: number; name: string }[] }[]>([]);
-  const [deployResult, setDeployResult] = useState<{ hostname: string; ipv4: string; password: string } | null>(null);
+  const [deployResult, setDeployResult] = useState<{ hostname: string; ipv4: string; ipv6: string; password: string } | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
 
   useEffect(() => {
@@ -182,6 +182,7 @@ export default function Home() {
       setDeployResult({
         hostname: data.data.hostname,
         ipv4: data.data.ipv4,
+        ipv6: data.data.ipv6,
         password: data.data.password,
       });
       setShowResultModal(true);
@@ -318,6 +319,10 @@ export default function Home() {
                       <p className="font-mono text-sm">{instance.ipv4}</p>
                     </div>
                     <div>
+                      <p className="text-sm text-gray-500">IPv6</p>
+                      <p className="font-mono text-sm">{instance.ipv6}</p>
+                    </div>
+                    <div>
                       <p className="text-sm text-gray-500">配置</p>
                       <p className="text-sm">{instance.cpu} CPU / {instance.memory}MB RAM / {instance.disk}GB {instance.disk_type}</p>
                     </div>
@@ -327,7 +332,7 @@ export default function Home() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">到期时间</p>
-                      <p className="text-sm">{new Date(instance.expiration_at).toLocaleString('zh-CN')}</p>
+                      <p className="text-sm">{new Date(instance.expiration_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</p>
                     </div>
                   </div>
 
@@ -484,6 +489,26 @@ export default function Home() {
                     </div>
 
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">IPv6 地址</label>
+                      <div className="flex">
+                        <input
+                          type="text"
+                          value={deployResult.ipv6}
+                          readOnly
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50 font-mono text-sm"
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(deployResult.ipv6);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
+                        >
+                          复制
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Root 密码</label>
                       <div className="flex">
                         <input
@@ -506,7 +531,7 @@ export default function Home() {
                     <div>
                       <button
                         onClick={() => {
-                          const text = `主机名: ${deployResult.hostname}\nIPv4: ${deployResult.ipv4}\n密码: ${deployResult.password}`;
+                          const text = `主机名: ${deployResult.hostname}\nIPv4: ${deployResult.ipv4}\nIPv6: ${deployResult.ipv6}\n密码: ${deployResult.password}`;
                           navigator.clipboard.writeText(text);
                         }}
                         className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
