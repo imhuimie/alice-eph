@@ -1,6 +1,6 @@
-// Alice API 响应类型定义
+// Alice API 类型定义
 
-export interface APIResponse<T> {
+export interface APIResponse<T = unknown> {
   status: number;
   message: string;
   data: T;
@@ -43,6 +43,16 @@ export interface RebuildResponse {
   password: string;
 }
 
+export interface OS {
+  id: number;
+  name: string;
+}
+
+export interface OSGroup {
+  group_name: string;
+  os_list: OS[];
+}
+
 export interface Plan {
   id: number;
   name: string;
@@ -52,16 +62,6 @@ export interface Plan {
   disk: number;
   network_speed: string;
   os: OSGroup[];
-}
-
-export interface OSGroup {
-  group_name: string;
-  os_list: OS[];
-}
-
-export interface OS {
-  id: number;
-  name: string;
 }
 
 export interface RenewalResponse {
@@ -112,4 +112,27 @@ export interface UserInfo {
   email: string;
   username: string;
   credit: number;
+}
+
+export interface DeployParams {
+  product_id: string;
+  os_id: string;
+  time: string;
+  sshKey?: string;
+}
+
+export interface PowerParams {
+  id: string;
+  action: 'boot' | 'shutdown' | 'restart' | 'poweroff';
+}
+
+export interface RebuildParams {
+  id: string;
+  os: string;
+  sshKey: string;
+}
+
+export interface RenewalParams {
+  id: string;
+  time: string;
 }
