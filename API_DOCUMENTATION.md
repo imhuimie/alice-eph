@@ -20,6 +20,40 @@ https://your-domain.com/api/alice
 
 ---
 
+## 代理端点 (Proxy)
+
+### 1. 通用 API 代理
+
+**端点:** `POST /api/proxy`
+
+**描述:** 通用代理端点，用于转发请求到 Alice API。支持所有 Alice API 操作。
+
+**请求示例:**
+```json
+{
+  "endpoint": "/Evo/Instance",
+  "method": "GET",
+  "token": "YOUR_API_TOKEN",
+  "body": {} // 可选，仅用于 POST 请求
+}
+```
+
+**响应示例:**
+```json
+{
+  "success": true,
+  "data": [...]
+}
+```
+
+**特性:**
+- 30秒请求超时
+- 自动处理 FormData 格式
+- 统一错误处理
+- 支持所有 HTTP 方法
+
+---
+
 ## 实例管理 (Instances)
 
 ### 1. 获取所有实例
@@ -57,7 +91,8 @@ https://your-domain.com/api/alice
   "product_id": "1",
   "os_id": "10",
   "time": "168",
-  "sshKey": "1" // 可选
+  "sshKey": "1", // 可选
+  "bootScript": "#!/bin/bash\necho 'Hello World'" // 可选，启动脚本
 }
 ```
 
@@ -114,7 +149,8 @@ https://your-domain.com/api/alice
 ```json
 {
   "os": "10",
-  "sshKey": "1"
+  "sshKey": "1", // 可选
+  "bootScript": "#!/bin/bash\necho 'Hello World'" // 可选，启动脚本
 }
 ```
 
@@ -334,7 +370,26 @@ https://your-domain.com/api/alice
 ### JavaScript/TypeScript 示例
 
 ```typescript
-// 使用 fetch API
+// 使用代理端点
+async function makeAliceAPIRequest(endpoint: string, method: string, token: string, body?: any) {
+  const response = await fetch('/api/proxy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      endpoint,
+      method,
+      token,
+      body
+    })
+  });
+  
+  const data = await response.json();
+  return data;
+}
+
+// 使用直接端点
 async function listInstances(token: string) {
   const response = await fetch('/api/instances', {
     headers: {
@@ -346,7 +401,7 @@ async function listInstances(token: string) {
   return data;
 }
 
-// 部署新实例
+// 部署新实例（支持 bootScript）
 async function deployInstance(token: string, params: DeployParams) {
   const response = await fetch('/api/instances', {
     method: 'POST',
@@ -354,7 +409,10 @@ async function deployInstance(token: string, params: DeployParams) {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(params)
+    body: JSON.stringify({
+      ...params,
+      bootScript: params.bootScript // 可选的启动脚本
+    })
   });
   
   const data = await response.json();
@@ -385,7 +443,10 @@ curl -X POST https://your-domain.com/api/instances \
 ## 注意事项
 
 1. 所有时间相关的参数单位都是小时
-2. API Token 需要妥善保管不要暴露在客户端代码内
+2. API Token 需要妥善保管，不要暴露在客户端代码内
 3. 建议使用环境变量存储 API Token
-4. 部署和重建操作会返回新的随机密码,请及时保存
+4. 部署和重建操作会返回新的随机密码，请及时保存
 5. 实例 ID 在销毁后不可恢复
+6. **bootScript** 参数可用于自动化实例配置，在部署和重建时执行
+7. 代理端点提供统一的 API 访问方式，简化客户端实现
+8. 所有代理请求都有 30 秒超时限制
