@@ -962,8 +962,8 @@ function getHTMLPage() {
       <label for="api-token"><strong>API Token (Client ID:Secret)</strong></label>
       <div class="password-input-wrapper">
         <input type="password" id="api-token" placeholder="client_id:secret">
-        <button class="toggle-password" onclick="togglePasswordVisibility()" type="button" title="显示/隐藏密码">
-          👁️
+        <button class="toggle-password" onclick="togglePasswordVisibility()" type="button" title="显示密码">
+          ○
         </button>
       </div>
       <button onclick="saveToken()" style="margin-top: 10px; width: auto; padding: 10px 20px;">登录</button>
@@ -1348,11 +1348,15 @@ function getHTMLPage() {
       
       if (input.type === 'password') {
         input.type = 'text';
-        button.textContent = '🙈';
+        button.textContent = '●';
+        button.style.fontSize = '12px';
+        button.style.letterSpacing = '2px';
         button.title = '隐藏密码';
       } else {
         input.type = 'password';
-        button.textContent = '👁️';
+        button.textContent = '○';
+        button.style.fontSize = '16px';
+        button.style.letterSpacing = '0';
         button.title = '显示密码';
       }
     }
@@ -1785,10 +1789,10 @@ function getHTMLPage() {
     
     // 显示部署结果 Modal
     function showResultModal() {
-      document.getElementById('result-hostname').value = deployResult.hostname;
-      document.getElementById('result-ipv4').value = deployResult.ipv4;
-      document.getElementById('result-ipv6').value = deployResult.ipv6;
-      document.getElementById('result-password').value = deployResult.password;
+      document.getElementById('result-hostname').value = '主机名：' + deployResult.hostname;
+      document.getElementById('result-ipv4').value = 'IPv4地址：' + deployResult.ipv4;
+      document.getElementById('result-ipv6').value = 'IPv6地址：' + deployResult.ipv6;
+      document.getElementById('result-password').value = '登录密码：' + deployResult.password;
       
       document.getElementById('result-modal').classList.add('show');
     }
@@ -1809,10 +1813,10 @@ function getHTMLPage() {
     
     // 复制全部信息
     function copyAllInfo() {
-      const text = \`主机名: \${deployResult.hostname}
-IPv4: \${deployResult.ipv4}
-IPv6: \${deployResult.ipv6}
-密码: \${deployResult.password}\`;
+      const text = \`主机名：\${deployResult.hostname}
+IPv4地址：\${deployResult.ipv4}
+IPv6地址：\${deployResult.ipv6}
+登录密码：\${deployResult.password}\`;
       
       const textarea = document.createElement('textarea');
       textarea.value = text;
