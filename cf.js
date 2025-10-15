@@ -84,9 +84,10 @@ class AliceAPIClient {
   }
 
   // 部署新实例
-  async deployInstance(productId, osId, time, sshKey = '') {
+  async deployInstance(productId, osId, time, sshKey = '', bootScript = '') {
     const params = { product_id: productId, os_id: osId, time };
     if (sshKey) params.sshKey = sshKey;
+    if (bootScript) params.bootScript = bootScript;
     
     const formData = createFormData(params);
     return await makeRequest('/Evo/Deploy', {
@@ -120,8 +121,11 @@ class AliceAPIClient {
   }
 
   // 重建实例
-  async rebuildInstance(id, os, sshKey) {
-    const formData = createFormData({ id, os, sshKey });
+  async rebuildInstance(id, os, sshKey = '', bootScript = '') {
+    const params = { id, os };
+    if (sshKey) params.sshKey = sshKey;
+    if (bootScript) params.bootScript = bootScript;
+    const formData = createFormData(params);
     return await makeRequest('/Evo/Rebuild', {
       method: 'POST',
       body: formData,
@@ -1013,13 +1017,82 @@ function getHTMLPage() {
           </div>
           
           <div class="form-group">
-            <label>SSH密钥 ID (可选)</label>
-            <input type="text" id="deploy-sshkey" placeholder="留空则不使用SSH密钥">
+            <label>SSH密钥 (可选)</label>
+            <select id="deploy-sshkey" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;">
+              <option value="">不使用SSH密钥</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>启动脚本 (可选)</label>
+            <textarea id="deploy-bootscript" placeholder="输入启动脚本代码，将自动编码为Base64" rows="6" style="resize: vertical; font-family: 'Courier New', monospace; font-size: 13px; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;"></textarea>
+            <p style="font-size: 12px; color: #666; margin-top: 4px;">
+              脚本将在实例首次启动时执行
+            </p>
+          </div>
+          
+          <div class="form-group" id="deploy-bootscript-preview-container" style="display: none;">
+            <label>Base64 预览</label>
+            <textarea id="deploy-bootscript-preview" readonly rows="4" style="resize: vertical; font-family: 'Courier New', monospace; font-size: 11px; background: #f8f9fa; color: #666; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;"></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn-secondary" onclick="closeDeployModal()">取消</button>
           <button onclick="confirmDeploy()">确认部署</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 重建实例 Modal -->
+    <div id="rebuild-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>重建实例</h2>
+          <button class="modal-close" onclick="closeRebuildModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning">
+            ⚠️ 重建实例将清除所有数据，请谨慎操作！
+          </div>
+          
+          <div class="form-group">
+            <label>实例 ID</label>
+            <input type="text" id="rebuild-instance-id" readonly style="background: #f8f9fa;">
+          </div>
+          
+          <div class="form-group">
+            <label>当前系统</label>
+            <input type="text" id="rebuild-current-os" readonly style="background: #f8f9fa;">
+          </div>
+          
+          <div class="form-group">
+            <label>选择新操作系统 *</label>
+            <div id="rebuild-os-list"></div>
+          </div>
+          
+          <div class="form-group">
+            <label>SSH密钥 (可选)</label>
+            <select id="rebuild-sshkey" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;">
+              <option value="">不使用SSH密钥</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>启动脚本 (可选)</label>
+            <textarea id="rebuild-bootscript" placeholder="输入启动脚本代码" rows="6" style="resize: vertical; font-family: 'Courier New', monospace; font-size: 13px; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;"></textarea>
+            <p style="font-size: 12px; color: #666; margin-top: 4px;">
+              脚本将在实例重建后首次启动时执行
+            </p>
+          </div>
+          
+          <div class="form-group" id="rebuild-bootscript-preview-container" style="display: none;">
+            <label>Base64 预览</label>
+            <textarea id="rebuild-bootscript-preview" readonly rows="4" style="resize: vertical; font-family: 'Courier New', monospace; font-size: 11px; background: #f8f9fa; color: #666; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeRebuildModal()">取消</button>
+          <button onclick="confirmRebuild()" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">确认重建</button>
         </div>
       </div>
     </div>
@@ -1444,6 +1517,7 @@ function getHTMLPage() {
             <button onclick="powerAction(\${instance.id}, 'boot')" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);">启动</button>
             <button onclick="powerAction(\${instance.id}, 'shutdown')" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">关机</button>
             <button onclick="powerAction(\${instance.id}, 'restart')">重启</button>
+            <button onclick="openRebuildModal(\${instance.id}, '\${instance.os}')" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">重建</button>
             <button class="btn-destroy" onclick="destroyInstance(\${instance.id})">销毁</button>
           </div>
         </div>
@@ -1621,10 +1695,40 @@ function getHTMLPage() {
       
       // 重置表单
       const timeInput = document.getElementById('deploy-time');
-      const sshkeyInput = document.getElementById('deploy-sshkey');
+      const sshkeySelect = document.getElementById('deploy-sshkey');
+      const bootScriptInput = document.getElementById('deploy-bootscript');
+      const previewContainer = document.getElementById('deploy-bootscript-preview-container');
+      const previewTextarea = document.getElementById('deploy-bootscript-preview');
       
       if (timeInput) timeInput.value = '24';
-      if (sshkeyInput) sshkeyInput.value = '';
+      if (sshkeySelect) {
+        // 加载SSH密钥列表
+        sshkeySelect.innerHTML = '<option value="">不使用SSH密钥</option>';
+        const sshKeysData = await apiCall('/User/SSHKey');
+        if (sshKeysData && sshKeysData.data) {
+          sshKeysData.data.forEach(key => {
+            const option = document.createElement('option');
+            option.value = key.id;
+            option.textContent = key.name + ' (ID: ' + key.id + ')';
+            sshkeySelect.appendChild(option);
+          });
+        }
+      }
+      if (bootScriptInput) {
+        bootScriptInput.value = '';
+        // 添加输入事件监听
+        bootScriptInput.addEventListener('input', function() {
+          const script = this.value.trim();
+          if (script) {
+            const base64 = btoa(unescape(encodeURIComponent(script)));
+            previewTextarea.value = base64;
+            previewContainer.style.display = 'block';
+          } else {
+            previewContainer.style.display = 'none';
+          }
+        });
+      }
+      if (previewContainer) previewContainer.style.display = 'none';
     }
     
     // 关闭部署 Modal
@@ -1657,6 +1761,12 @@ function getHTMLPage() {
       
       if (sshKey) {
         body.sshKey = sshKey;
+      }
+      
+      // 获取启动脚本并转换为Base64
+      const bootScript = document.getElementById('deploy-bootscript').value.trim();
+      if (bootScript) {
+        body.bootScript = btoa(unescape(encodeURIComponent(bootScript)));
       }
       
       const data = await apiCall('/Evo/Deploy', 'POST', body);
@@ -1711,6 +1821,153 @@ IPv6: \${deployResult.ipv6}
       document.execCommand('copy');
       document.body.removeChild(textarea);
       alert('已复制全部信息到剪贴板');
+    }
+    
+    // 打开重建 Modal
+    async function openRebuildModal(instanceId, currentOs) {
+      const modal = document.getElementById('rebuild-modal');
+      const instanceIdInput = document.getElementById('rebuild-instance-id');
+      const currentOsInput = document.getElementById('rebuild-current-os');
+      const rebuildOsList = document.getElementById('rebuild-os-list');
+      const sshKeyInput = document.getElementById('rebuild-sshkey');
+      const bootScriptInput = document.getElementById('rebuild-bootscript');
+      const previewContainer = document.getElementById('rebuild-bootscript-preview-container');
+      const previewTextarea = document.getElementById('rebuild-bootscript-preview');
+      
+      // 设置实例信息
+      if (instanceIdInput) instanceIdInput.value = instanceId;
+      if (currentOsInput) currentOsInput.value = currentOs;
+      if (sshKeyInput) {
+        // 加载SSH密钥列表
+        sshKeyInput.innerHTML = '<option value="">不使用SSH密钥</option>';
+        const sshKeysData = await apiCall('/User/SSHKey');
+        if (sshKeysData && sshKeysData.data) {
+          sshKeysData.data.forEach(key => {
+            const option = document.createElement('option');
+            option.value = key.id;
+            option.textContent = key.name + ' (ID: ' + key.id + ')';
+            sshKeyInput.appendChild(option);
+          });
+        }
+      }
+      if (bootScriptInput) {
+        bootScriptInput.value = '';
+        // 添加输入事件监听
+        bootScriptInput.addEventListener('input', function() {
+          const script = this.value.trim();
+          if (script) {
+            const base64 = btoa(unescape(encodeURIComponent(script)));
+            previewTextarea.value = base64;
+            previewContainer.style.display = 'block';
+          } else {
+            previewContainer.style.display = 'none';
+          }
+        });
+      }
+      if (previewContainer) previewContainer.style.display = 'none';
+      
+      // 显示加载状态
+      if (rebuildOsList) {
+        rebuildOsList.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+      }
+      
+      modal.classList.add('show');
+      
+      // 从实例中找到对应的plan_id并加载操作系统列表
+      try {
+        // 获取所有实例来找到对应的plan_id
+        const instancesData = await apiCall('/Evo/Instance');
+        if (instancesData && instancesData.data) {
+          const instance = instancesData.data.find(inst => inst.id === instanceId);
+          if (instance && instance.plan_id) {
+            // 使用plan_id获取操作系统列表
+            const osData = await apiCall('/Evo/getOSByPlan', 'POST', { plan_id: instance.plan_id.toString() });
+            
+            if (rebuildOsList) {
+              if (osData && osData.data) {
+                const osHTML = osData.data.map(group => \`
+                  <div class="os-group">
+                    <h4>\${group.group_name}</h4>
+                    \${group.os_list.map(os => \`
+                      <div class="os-option">
+                        <input type="radio" name="rebuild-os" value="\${os.id}" id="rebuild-os-\${os.id}">
+                        <label for="rebuild-os-\${os.id}">\${os.name}</label>
+                      </div>
+                    \`).join('')}
+                  </div>
+                \`).join('');
+                
+                rebuildOsList.innerHTML = osHTML;
+              } else {
+                rebuildOsList.innerHTML = '<p style="color: #999;">获取操作系统列表失败</p>';
+              }
+            }
+          } else {
+            if (rebuildOsList) {
+              rebuildOsList.innerHTML = '<p style="color: #999;">无法获取实例的方案信息</p>';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('加载操作系统列表时出错:', error);
+        if (rebuildOsList) {
+          rebuildOsList.innerHTML = '<p style="color: #999;">加载失败: ' + error.message + '</p>';
+        }
+      }
+    }
+    
+    // 关闭重建 Modal
+    function closeRebuildModal() {
+      document.getElementById('rebuild-modal').classList.remove('show');
+    }
+    
+    // 确认重建
+    async function confirmRebuild() {
+      const instanceId = document.getElementById('rebuild-instance-id').value;
+      const osRadio = document.querySelector('input[name="rebuild-os"]:checked');
+      const sshKey = document.getElementById('rebuild-sshkey').value;
+      
+      if (!osRadio) {
+        alert('请选择新的操作系统');
+        return;
+      }
+      
+      if (!confirm('确定要重建此实例吗？此操作将清除所有数据！')) {
+        return;
+      }
+      
+      const body = {
+        id: instanceId,
+        os: osRadio.value
+      };
+      
+      if (sshKey) {
+        body.sshKey = sshKey;
+      }
+      
+      // 获取启动脚本并转换为Base64
+      const bootScript = document.getElementById('rebuild-bootscript').value.trim();
+      if (bootScript) {
+        body.bootScript = btoa(unescape(encodeURIComponent(bootScript)));
+      }
+      
+      const data = await apiCall('/Evo/Rebuild', 'POST', body);
+      if (data && data.data) {
+        // 保存重建结果
+        deployResult = {
+          hostname: data.data.hostname || '未提供',
+          ipv4: data.data.ipv4 || '未提供',
+          ipv6: data.data.ipv6 || '未提供',
+          password: data.data.password || '未提供'
+        };
+        
+        closeRebuildModal();
+        showResultModal();
+      } else if (data) {
+        alert(data.message || '重建成功');
+        closeRebuildModal();
+        fetchInstances();
+      }
     }
   </script>
 </body>
