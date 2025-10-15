@@ -11,6 +11,7 @@ export const POST = createApiHandlerWithParams<RebuildResponse>(
       id: params!.id,
       os: body.os,
       sshKey: body.sshKey,
+      bootScript: body.bootScript,
     });
   },
   '重建实例失败'

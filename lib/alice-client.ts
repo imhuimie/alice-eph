@@ -1,20 +1,20 @@
 // Alice API 客户端库
 import type {
   APIResponse,
-  Instance,
-  DeployResponse,
   DeployParams,
-  RebuildResponse,
-  RebuildParams,
-  Plan,
-  OSGroup,
-  RenewalResponse,
-  RenewalParams,
-  StateResponse,
-  SSHKey,
+  DeployResponse,
   EVOPermissions,
-  UserInfo,
+  Instance,
+  OSGroup,
+  Plan,
   PowerParams,
+  RebuildParams,
+  RebuildResponse,
+  RenewalParams,
+  RenewalResponse,
+  SSHKey,
+  StateResponse,
+  UserInfo,
 } from '@/types/alice';
 
 const ALICE_API_BASE_URL = process.env.ALICE_API_BASE_URL || 'https://app.alice.ws/cli/v1';
@@ -105,6 +105,7 @@ export class AliceClient {
           os_id: params.os_id,
           time: params.time,
           ...(params.sshKey && { sshKey: params.sshKey }),
+          ...(params.bootScript && { bootScript: params.bootScript }),
         },
         token: this.token,
       }
@@ -156,7 +157,8 @@ export class AliceClient {
         body: {
           id: params.id,
           os: params.os,
-          sshKey: params.sshKey,
+          ...(params.sshKey && { sshKey: params.sshKey }),
+          ...(params.bootScript && { bootScript: params.bootScript }),
         },
         token: this.token,
       }
@@ -268,3 +270,4 @@ export function createAliceClient(token?: string): AliceClient {
  * 导出单个API请求函数供服务端路由使用
  */
 export { aliceApiRequest };
+

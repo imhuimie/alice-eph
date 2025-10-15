@@ -119,6 +119,7 @@ export interface DeployParams {
   os_id: string;
   time: string;
   sshKey?: string;
+  bootScript?: string;
 }
 
 export interface PowerParams {
@@ -129,7 +130,8 @@ export interface PowerParams {
 export interface RebuildParams {
   id: string;
   os: string;
-  sshKey: string;
+  sshKey?: string;
+  bootScript?: string;
 }
 
 export interface RenewalParams {

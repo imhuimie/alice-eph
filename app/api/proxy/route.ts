@@ -27,19 +27,33 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const response = await fetch(url, {
-      method: method || 'GET',
-      headers,
-      body: requestBody,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30秒超时
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`API 错误：状态码 ${response.status}, 响应体 ${text}`);
+    try {
+      const response = await fetch(url, {
+        method: method || 'GET',
+        headers,
+        body: requestBody,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`API 错误：状态码 ${response.status}, 响应体 ${text}`);
+      }
+
+      const data = await response.json();
+      return NextResponse.json(data);
+    } catch (fetchError) {
+      clearTimeout(timeout);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error('请求超时，请检查网络连接');
+      }
+      throw fetchError;
     }
-
-    const data = await response.json();
-    return NextResponse.json(data);
   } catch (error) {
     console.error('API 错误:', error);
     return NextResponse.json(
