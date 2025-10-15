@@ -172,7 +172,7 @@ export default function Home() {
     }
   };
 
-  const fetchOSForRebuild = async (instanceId: number) => {
+  const fetchOSForRebuild = async (instanceId: number, plansList: Plan[]) => {
     try {
       // 先获取实例详情，找到对应的plan ID
       const instance = instances.find(inst => inst.id === instanceId);
@@ -181,10 +181,10 @@ export default function Home() {
         return;
       }
 
-      // 从plans列表中查找匹配的plan
-      const matchingPlan = plans.find(plan => plan.name === instance.plan);
+      // 从传入的plans列表中查找匹配的plan
+      const matchingPlan = plansList.find(plan => plan.name === instance.plan);
       if (!matchingPlan) {
-        alert('未找到对应的方案信息，请先加载方案列表');
+        alert('未找到对应的方案信息');
         return;
       }
 
@@ -466,10 +466,19 @@ export default function Home() {
                       onClick={async () => {
                         setSelectedInstance(instance);
                         // 确保plans已加载
-                        if (plans.length === 0) {
-                          await fetchPlans();
+                        let currentPlans = plans;
+                        if (currentPlans.length === 0) {
+                          try {
+                            const data = await apiRequest('/Evo/Plan');
+                            currentPlans = data.data || [];
+                            setPlans(currentPlans);
+                          } catch (error) {
+                            console.error('获取方案失败:', error);
+                            alert('获取方案失败，无法继续');
+                            return;
+                          }
                         }
-                        await fetchOSForRebuild(instance.id);
+                        await fetchOSForRebuild(instance.id, currentPlans);
                         await fetchSSHKeys();
                         setShowRebuildModal(true);
                       }}
@@ -584,9 +593,19 @@ export default function Home() {
                           onClick={async () => {
                             try {
                               await navigator.clipboard.writeText(deployResult.hostname);
-                              alert('已复制');
+                              alert('已复制到剪贴板');
                             } catch (err) {
-                              alert('复制失败，请手动复制');
+                              // Fallback: 选中文本
+                              const input = document.querySelector('input[value="' + deployResult.hostname + '"]') as HTMLInputElement;
+                              if (input) {
+                                input.select();
+                                try {
+                                  document.execCommand('copy');
+                                  alert('已复制到剪贴板');
+                                } catch {
+                                  alert('复制失败，请手动选择并复制（Ctrl+C）');
+                                }
+                              }
                             }
                           }}
                           className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
@@ -609,9 +628,18 @@ export default function Home() {
                           onClick={async () => {
                             try {
                               await navigator.clipboard.writeText(deployResult.ipv4);
-                              alert('已复制');
+                              alert('已复制到剪贴板');
                             } catch (err) {
-                              alert('复制失败，请手动复制');
+                              const input = document.querySelector('input[value="' + deployResult.ipv4 + '"]') as HTMLInputElement;
+                              if (input) {
+                                input.select();
+                                try {
+                                  document.execCommand('copy');
+                                  alert('已复制到剪贴板');
+                                } catch {
+                                  alert('复制失败，请手动选择并复制（Ctrl+C）');
+                                }
+                              }
                             }
                           }}
                           className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
@@ -634,9 +662,18 @@ export default function Home() {
                           onClick={async () => {
                             try {
                               await navigator.clipboard.writeText(deployResult.ipv6);
-                              alert('已复制');
+                              alert('已复制到剪贴板');
                             } catch (err) {
-                              alert('复制失败，请手动复制');
+                              const input = document.querySelector('input[value="' + deployResult.ipv6 + '"]') as HTMLInputElement;
+                              if (input) {
+                                input.select();
+                                try {
+                                  document.execCommand('copy');
+                                  alert('已复制到剪贴板');
+                                } catch {
+                                  alert('复制失败，请手动选择并复制（Ctrl+C）');
+                                }
+                              }
                             }
                           }}
                           className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
@@ -659,9 +696,18 @@ export default function Home() {
                           onClick={async () => {
                             try {
                               await navigator.clipboard.writeText(deployResult.password);
-                              alert('已复制');
+                              alert('已复制到剪贴板');
                             } catch (err) {
-                              alert('复制失败，请手动复制');
+                              const input = document.querySelector('input[value="' + deployResult.password + '"]') as HTMLInputElement;
+                              if (input) {
+                                input.select();
+                                try {
+                                  document.execCommand('copy');
+                                  alert('已复制到剪贴板');
+                                } catch {
+                                  alert('复制失败，请手动选择并复制（Ctrl+C）');
+                                }
+                              }
                             }
                           }}
                           className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
@@ -677,9 +723,23 @@ export default function Home() {
                           try {
                             const text = `主机名: ${deployResult.hostname}\nIPv4: ${deployResult.ipv4}\nIPv6: ${deployResult.ipv6}\n密码: ${deployResult.password}`;
                             await navigator.clipboard.writeText(text);
-                            alert('已复制全部信息');
+                            alert('已复制全部信息到剪贴板');
                           } catch (err) {
-                            alert('复制失败，请手动复制');
+                            // Fallback: 创建临时textarea
+                            const textarea = document.createElement('textarea');
+                            textarea.value = `主机名: ${deployResult.hostname}\nIPv4: ${deployResult.ipv4}\nIPv6: ${deployResult.ipv6}\n密码: ${deployResult.password}`;
+                            textarea.style.position = 'fixed';
+                            textarea.style.opacity = '0';
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            try {
+                              document.execCommand('copy');
+                              alert('已复制全部信息到剪贴板');
+                            } catch {
+                              alert('复制失败，请手动复制上述信息');
+                            } finally {
+                              document.body.removeChild(textarea);
+                            }
                           }
                         }}
                         className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
