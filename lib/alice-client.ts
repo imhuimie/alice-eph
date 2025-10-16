@@ -4,6 +4,10 @@ import type {
   DeployParams,
   DeployResponse,
   EVOPermissions,
+  ExecuteCommandParams,
+  ExecuteCommandResponse,
+  GetCommandResultParams,
+  GetCommandResultResponse,
   Instance,
   OSGroup,
   Plan,
@@ -254,6 +258,42 @@ export class AliceClient {
     const response = await aliceApiRequest<UserInfo>(
       '/User/Info',
       { token: this.token }
+    );
+    return response.data;
+  }
+
+  /**
+   * 异步执行命令
+   */
+  async executeCommandAsync(params: ExecuteCommandParams): Promise<ExecuteCommandResponse> {
+    const response = await aliceApiRequest<ExecuteCommandResponse>(
+      '/Command/executeAsync',
+      {
+        method: 'POST',
+        body: {
+          server_id: params.server_id,
+          command: params.command,
+        },
+        token: this.token,
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * 获取命令执行结果
+   */
+  async getCommandResult(params: GetCommandResultParams): Promise<GetCommandResultResponse> {
+    const response = await aliceApiRequest<GetCommandResultResponse>(
+      '/Command/getResult',
+      {
+        method: 'POST',
+        body: {
+          command_uid: params.command_uid,
+          ...(params.output_base64 && { output_base64: params.output_base64 }),
+        },
+        token: this.token,
+      }
     );
     return response.data;
   }

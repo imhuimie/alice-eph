@@ -13,7 +13,7 @@ export default function Home() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'instances' | 'plans' | 'user'>('instances');
+  const [activeTab, setActiveTab] = useState<'instances' | 'command' | 'plans' | 'user'>('instances');
   const [showDeployModal, setShowDeployModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [deployForm, setDeployForm] = useState({
@@ -34,6 +34,12 @@ export default function Home() {
   });
   const [sshKeys, setSSHKeys] = useState<{ id: number; name: string; publickey: string }[]>([]);
   const [rebuildOSList, setRebuildOSList] = useState<{ group_name: string; os_list: { id: number; name: string }[] }[]>([]);
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string>('');
+  const [commandInput, setCommandInput] = useState('');
+  const [commandOutput, setCommandOutput] = useState('');
+  const [commandUid, setCommandUid] = useState('');
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [outputBase64, setOutputBase64] = useState(true);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('alice_api_token');
@@ -286,6 +292,68 @@ export default function Home() {
     }
   };
 
+  const handleExecuteCommand = async () => {
+    if (!commandInput.trim()) {
+      alert('请输入命令');
+      return;
+    }
+
+    if (!selectedInstanceId) {
+      alert('请选择实例');
+      return;
+    }
+
+    setIsExecuting(true);
+    setCommandOutput('');
+    
+    try {
+      const commandBase64 = btoa(unescape(encodeURIComponent(commandInput)));
+      
+      const executeData = await apiRequest('/Command/executeAsync', {
+        method: 'POST',
+        body: {
+          server_id: selectedInstanceId,
+          command: commandBase64,
+        },
+      });
+
+      const uid = executeData.data.command_uid;
+      setCommandUid(uid);
+      alert(`命令已提交成功！\nCommand UID: ${uid}\n\n请使用下方的"查询命令结果"功能查看执行结果。`);
+      setIsExecuting(false);
+    } catch (error) {
+      alert('执行失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      setIsExecuting(false);
+    }
+  };
+
+  const handleGetCommandResult = async () => {
+    if (!commandUid.trim()) {
+      alert('请输入 Command UID');
+      return;
+    }
+
+    setIsExecuting(true);
+    setCommandOutput('正在获取结果...');
+    
+    try {
+      const resultData = await apiRequest('/Command/getResult', {
+        method: 'POST',
+        body: {
+          command_uid: commandUid,
+          output_base64: outputBase64 ? 'true' : 'false',
+        },
+      });
+
+      // 直接显示 API 返回的内容，不做任何处理
+      setCommandOutput(resultData.data.output);
+    } catch (error) {
+      setCommandOutput('获取结果失败: ' + (error instanceof Error ? error.message : '未知错误'));
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
   useEffect(() => {
     if (isTokenSet) {
       if (activeTab === 'instances') {
@@ -294,6 +362,8 @@ export default function Home() {
         fetchPlans();
       } else if (activeTab === 'user') {
         fetchUserInfo();
+      } else if (activeTab === 'command') {
+        fetchInstances();
       }
     }
   }, [activeTab, isTokenSet]);
@@ -369,6 +439,16 @@ export default function Home() {
               }`}
             >
               实例列表
+            </button>
+            <button
+              onClick={() => setActiveTab('command')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'command'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              执行命令
             </button>
             <button
               onClick={() => setActiveTab('plans')}
@@ -465,7 +545,6 @@ export default function Home() {
                     <button
                       onClick={async () => {
                         setSelectedInstance(instance);
-                        // 确保plans已加载
                         let currentPlans = plans;
                         if (currentPlans.length === 0) {
                           try {
@@ -547,6 +626,148 @@ export default function Home() {
                 </p>
                 <p className="text-xs text-gray-400">{userInfo.credit} credits</p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'command' && !loading && (
+          <div className="bg-white rounded-lg shadow p-6 max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">命令执行</h2>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  选择实例 *
+                </label>
+                <select
+                  value={selectedInstanceId}
+                  onChange={(e) => setSelectedInstanceId(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isExecuting}
+                >
+                  <option value="">请选择要执行命令的实例</option>
+                  {instances.map((instance) => (
+                    <option key={instance.id} value={instance.id.toString()}>
+                      {instance.hostname} (ID: {instance.id}) - {instance.ipv4}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  输入命令 *
+                </label>
+                <textarea
+                  value={commandInput}
+                  onChange={(e) => setCommandInput(e.target.value)}
+                  placeholder="例如: ls -la&#x0A;或多行命令:&#x0A;cd /var/www&#x0A;ls -la"
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  disabled={isExecuting}
+                />
+              </div>
+
+              <div>
+                <button
+                  onClick={handleExecuteCommand}
+                  disabled={!commandInput.trim() || !selectedInstanceId || isExecuting}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {isExecuting ? '提交中...' : '执行命令'}
+                </button>
+                <p className="text-xs text-gray-500 mt-2">
+                  提交后将返回 Command UID，请使用下方功能查询执行结果
+                </p>
+              </div>
+
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">查询命令结果</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Command UID *
+                    </label>
+                    <input
+                      type="text"
+                      value={commandUid}
+                      onChange={(e) => setCommandUid(e.target.value)}
+                      placeholder="输入 Command UID"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                      disabled={isExecuting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      输出格式 *
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          checked={outputBase64}
+                          onChange={() => setOutputBase64(true)}
+                          className="mr-2"
+                          disabled={isExecuting}
+                        />
+                        <span className="text-sm text-gray-700">Base64 编码</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          checked={!outputBase64}
+                          onChange={() => setOutputBase64(false)}
+                          className="mr-2"
+                          disabled={isExecuting}
+                        />
+                        <span className="text-sm text-gray-700">纯文本</span>
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {outputBase64
+                        ? 'API返回Base64编码的原始结果'
+                        : 'API返回纯文本结果'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <button
+                      onClick={handleGetCommandResult}
+                      disabled={!commandUid.trim() || isExecuting}
+                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {isExecuting ? '查询中...' : '查询结果'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {commandOutput && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    执行结果
+                  </label>
+                  <div className="relative">
+                    <pre className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-900 text-green-400 font-mono text-sm overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
+{commandOutput}
+                    </pre>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(commandOutput);
+                          alert('已复制到剪贴板');
+                        } catch (err) {
+                          alert('复制失败');
+                        }
+                      }}
+                      className="absolute top-2 right-2 px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 text-xs"
+                    >
+                      复制
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1050,6 +1271,7 @@ export default function Home() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

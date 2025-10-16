@@ -138,3 +138,22 @@ export interface RenewalParams {
   id: string;
   time: string;
 }
+
+// 命令执行相关类型
+export interface ExecuteCommandParams {
+  server_id: string;
+  command: string; // Base64编码的命令
+}
+
+export interface ExecuteCommandResponse {
+  command_uid: string;
+}
+
+export interface GetCommandResultParams {
+  command_uid: string;
+  output_base64?: string; // 'true' 或 'false'
+}
+
+export interface GetCommandResultResponse {
+  output: string; // Base64编码的输出
+}
