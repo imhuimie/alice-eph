@@ -345,6 +345,90 @@ https://your-domain.com/api/alice
 
 ---
 
+## 命令执行 (Command)
+
+### 13. 异步执行命令
+
+**端点:** `POST /api/command/execute`
+
+**描述:** 在指定实例上异步执行命令，立即返回 Command UID，不等待命令执行完成。
+
+**请求示例:**
+```json
+{
+  "server_id": "123",
+  "command": "bHMgLWxhCg==" // Base64 编码的命令
+}
+```
+
+**请求参数说明:**
+- `server_id` (必需): 实例 ID
+- `command` (必需): Base64 编码的命令字符串
+
+**响应示例:**
+```json
+{
+  "success": true,
+  "data": {
+    "command_uid": "cmd_0884e32faeaa35c134dc555d39f9f5f3_1760601725"
+  }
+}
+```
+
+**注意事项:**
+1. 命令必须使用 Base64 编码
+2. 返回的 `command_uid` 用于后续查询命令执行结果
+3. 命令会在后台异步执行，不会阻塞 API 响应
+4. 支持多行命令和复杂脚本
+
+### 14. 获取命令执行结果
+
+**端点:** `POST /api/command/result`
+
+**描述:** 根据 Command UID 查询命令的执行结果。
+
+**请求示例:**
+```json
+{
+  "command_uid": "cmd_0884e32faeaa35c134dc555d39f9f5f3_1760601725",
+  "output_base64": "true" // 可选，默认为 "false"
+}
+```
+
+**请求参数说明:**
+- `command_uid` (必需): 执行命令时返回的 UID
+- `output_base64` (可选): 是否以 Base64 编码返回结果
+  - `"true"`: API 返回 Base64 编码的结果
+  - `"false"`: API 返回纯文本结果（默认）
+
+**响应示例 (output_base64 = "false"):**
+```json
+{
+  "success": true,
+  "data": {
+    "output": "total 48\ndrwxr-xr-x 12 root root 4096 Jan 15 10:00 .\ndrwxr-xr-x 18 root root 4096 Jan 15 09:30 ..\n..."
+  }
+}
+```
+
+**响应示例 (output_base64 = "true"):**
+```json
+{
+  "success": true,
+  "data": {
+    "output": "dG90YWwgNDgKZHJ3eHIteHIteCAxMiByb290IHJvb3QgNDA5NiBKYW4gMTUgMTA6MDA..."
+  }
+}
+```
+
+**注意事项:**
+1. 命令执行完成前查询可能返回空结果或部分结果
+2. 建议在提交命令后等待适当时间再查询结果
+3. Base64 编码的结果需要客户端自行解码
+4. 长时间运行的命令可能需要多次查询
+
+---
+
 ## 错误响应
 
 所有错误响应都遵循以下格式:
@@ -418,6 +502,61 @@ async function deployInstance(token: string, params: DeployParams) {
   const data = await response.json();
   return data;
 }
+
+// 异步执行命令
+async function executeCommand(token: string, serverId: string, command: string) {
+  // 将命令编码为 Base64
+  const commandBase64 = btoa(unescape(encodeURIComponent(command)));
+  
+  const response = await fetch('/api/command/execute', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      server_id: serverId,
+      command: commandBase64
+    })
+  });
+  
+  const data = await response.json();
+  return data.data.command_uid;
+}
+
+// 获取命令执行结果
+async function getCommandResult(token: string, commandUid: string, useBase64 = false) {
+  const response = await fetch('/api/command/result', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      command_uid: commandUid,
+      output_base64: useBase64 ? 'true' : 'false'
+    })
+  });
+  
+  const data = await response.json();
+  return data.data.output;
+}
+
+// 完整的命令执行工作流
+async function runCommandAndGetResult(token: string, serverId: string, command: string) {
+  // 1. 执行命令
+  const commandUid = await executeCommand(token, serverId, command);
+  console.log('Command UID:', commandUid);
+  
+  // 2. 等待命令执行（根据命令复杂度调整等待时间）
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  // 3. 获取结果
+  const output = await getCommandResult(token, commandUid, false);
+  console.log('Output:', output);
+  
+  return output;
+}
 ```
 
 ### cURL 示例
@@ -436,6 +575,24 @@ curl -X POST https://your-domain.com/api/instances \
     "os_id": "10",
     "time": "168"
   }'
+
+# 执行命令（命令需要 Base64 编码）
+curl -X POST https://your-domain.com/api/command/execute \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "server_id": "123",
+    "command": "bHMgLWxh"
+  }'
+
+# 获取命令执行结果
+curl -X POST https://your-domain.com/api/command/result \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command_uid": "cmd_0884e32faeaa35c134dc555d39f9f5f3_1760601725",
+    "output_base64": "false"
+  }'
 ```
 
 ---
@@ -450,3 +607,9 @@ curl -X POST https://your-domain.com/api/instances \
 6. **bootScript** 参数可用于自动化实例配置，在部署和重建时执行
 7. 代理端点提供统一的 API 访问方式，简化客户端实现
 8. 所有代理请求都有 30 秒超时限制
+9. **命令执行**：
+   - 命令必须使用 Base64 编码传输
+   - 命令异步执行，需要通过 Command UID 查询结果
+   - 建议在命令提交后等待适当时间再查询结果
+   - `output_base64` 参数控制返回格式，默认为纯文本
+   - Base64 编码的结果不会自动解码，需客户端处理
