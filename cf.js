@@ -63,8 +63,9 @@ async function makeRequest(endpoint, options = {}) {
 function createFormData(params) {
   const formData = new FormData();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== null && value !== undefined && value !== '') {
-      formData.append(key, value);
+    // 允许空字符串和布尔false,只过滤null和undefined
+    if (value !== null && value !== undefined) {
+      formData.append(key, String(value));
     }
   }
   return formData;
@@ -185,6 +186,28 @@ class AliceAPIClient {
   // 获取用户信息
   async getUserInfo() {
     return await makeRequest('/User/Info', { token: this.token });
+  }
+
+  // 异步执行命令
+  async executeCommandAsync(serverId, command) {
+    const formData = createFormData({ server_id: serverId, command });
+    return await makeRequest('/Command/executeAsync', {
+      method: 'POST',
+      body: formData,
+      token: this.token,
+      contentType: null
+    });
+  }
+
+  // 获取命令执行结果
+  async getCommandResult(commandUid, outputBase64 = 'true') {
+    const formData = createFormData({ command_uid: commandUid, output_base64: outputBase64 });
+    return await makeRequest('/Command/getResult', {
+      method: 'POST',
+      body: formData,
+      token: this.token,
+      contentType: null
+    });
   }
 }
 
@@ -973,6 +996,7 @@ function getHTMLPage() {
       <!-- Tab 导航 -->
       <div class="tabs">
         <button class="tab-button active" onclick="switchTab('instances')">实例列表</button>
+        <button class="tab-button" onclick="switchTab('command')">命令执行</button>
         <button class="tab-button" onclick="switchTab('plans')">可用方案</button>
         <button class="tab-button" onclick="switchTab('user')">用户信息</button>
       </div>
@@ -985,6 +1009,67 @@ function getHTMLPage() {
       <!-- 可用方案 Tab -->
       <div id="tab-plans" class="tab-content">
         <div id="plans-list" class="plans-grid"></div>
+      </div>
+      
+      <!-- 命令执行 Tab -->
+      <div id="tab-command" class="tab-content">
+        <div class="action-card">
+          <h3>🔧 异步执行命令</h3>
+          <div class="form-group">
+            <label>选择实例 *</label>
+            <select id="cmd-server-id" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;">
+              <option value="">请先选择一个实例</option>
+            </select>
+            <p style="font-size: 12px; color: #666; margin-top: 4px;">
+              如果列表为空，请先到"实例列表"查看您的实例
+            </p>
+          </div>
+          <div class="form-group">
+            <label>命令 (Base64编码) *</label>
+            <textarea id="cmd-command-plain" placeholder="输入要执行的命令，将自动编码为Base64" rows="6" style="resize: vertical; font-family: 'Courier New', monospace; font-size: 13px; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;"></textarea>
+            <p style="font-size: 12px; color: #666; margin-top: 4px;">
+              示例命令：sudo apt-get install curl
+            </p>
+          </div>
+          <div class="form-group" id="cmd-base64-preview-container" style="display: none;">
+            <label>Base64 预览</label>
+            <textarea id="cmd-base64-preview" readonly rows="4" style="resize: vertical; font-family: 'Courier New', monospace; font-size: 11px; background: #f8f9fa; color: #666; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;"></textarea>
+          </div>
+          <button onclick="executeCommandAsync()">执行命令</button>
+        </div>
+        
+        <div class="action-card" style="margin-top: 20px;">
+          <h3>📊 获取命令执行结果</h3>
+          <div class="form-group">
+            <label>命令 UID *</label>
+            <input type="text" id="cmd-uid" placeholder="输入命令 UID (例如: cmd_xxx)">
+            <p style="font-size: 12px; color: #666; margin-top: 4px;">
+              执行命令后会返回 command_uid
+            </p>
+          </div>
+          <div class="form-group">
+            <label>输出格式</label>
+            <select id="cmd-output-base64" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;">
+              <option value="true">Base64 编码</option>
+              <option value="false">纯文本</option>
+            </select>
+          </div>
+          <button onclick="getCommandResult()">获取结果</button>
+          
+          <div class="form-group" id="cmd-output-container" style="display: none; margin-top: 20px;">
+            <label>命令输出</label>
+            <textarea id="cmd-output" readonly rows="15" style="resize: vertical; font-family: 'Courier New', monospace; font-size: 13px; background: #f8f9fa; color: #333; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word;"></textarea>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <button onclick="copyCommandOutput()" style="width: auto; padding: 8px 16px; font-size: 13px;">复制输出</button>
+              <button onclick="clearCommandOutput()" style="width: auto; padding: 8px 16px; font-size: 13px; background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);">清空</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="result-section" id="command-result" style="display: none;">
+          <h3>📊 执行结果</h3>
+          <div id="command-result-content" style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; max-height: 500px; overflow-y: auto;"></div>
+        </div>
       </div>
       
       <!-- 用户信息 Tab -->
@@ -1377,7 +1462,7 @@ function getHTMLPage() {
       // 更新 tab 按钮状态
       document.querySelectorAll('.tab-button').forEach((btn, index) => {
         btn.classList.remove('active');
-        const tabs = ['instances', 'plans', 'user'];
+        const tabs = ['instances', 'command', 'plans', 'user'];
         if (tabs[index] === tabName) {
           btn.classList.add('active');
         }
@@ -1401,9 +1486,171 @@ function getHTMLPage() {
         await fetchInstances();
       } else if (tabName === 'plans') {
         await fetchPlans();
+      } else if (tabName === 'command') {
+        initCommandTab();
       } else if (tabName === 'user') {
         await fetchUserInfo();
       }
+    }
+    
+    // 初始化命令执行 Tab
+    async function initCommandTab() {
+      const commandPlainInput = document.getElementById('cmd-command-plain');
+      const base64PreviewContainer = document.getElementById('cmd-base64-preview-container');
+      const base64PreviewTextarea = document.getElementById('cmd-base64-preview');
+      const serverSelect = document.getElementById('cmd-server-id');
+      
+      // 加载实例列表到下拉框
+      if (serverSelect) {
+        serverSelect.innerHTML = '<option value="">加载中...</option>';
+        const data = await apiCall('/Evo/Instance');
+        
+        if (data && data.data && data.data.length > 0) {
+          serverSelect.innerHTML = '<option value="">请选择一个实例</option>';
+          data.data.forEach(instance => {
+            const option = document.createElement('option');
+            option.value = instance.id;
+            option.textContent = \`\${instance.hostname} (ID: \${instance.id}) - \${instance.status}\`;
+            serverSelect.appendChild(option);
+          });
+        } else {
+          serverSelect.innerHTML = '<option value="">暂无可用实例</option>';
+        }
+      }
+      
+      if (commandPlainInput) {
+        // 移除旧的事件监听器（如果有）
+        commandPlainInput.removeEventListener('input', handleCommandInput);
+        // 添加新的事件监听器
+        commandPlainInput.addEventListener('input', handleCommandInput);
+      }
+      
+      function handleCommandInput() {
+        const command = commandPlainInput.value.trim();
+        if (command) {
+          const base64 = btoa(unescape(encodeURIComponent(command)));
+          base64PreviewTextarea.value = base64;
+          base64PreviewContainer.style.display = 'block';
+        } else {
+          base64PreviewContainer.style.display = 'none';
+        }
+      }
+    }
+    
+    // 异步执行命令
+    async function executeCommandAsync() {
+      const serverId = document.getElementById('cmd-server-id').value;
+      const commandPlain = document.getElementById('cmd-command-plain').value.trim();
+      const resultSection = document.getElementById('command-result');
+      const resultContent = document.getElementById('command-result-content');
+      
+      if (!serverId) {
+        alert('请选择一个实例');
+        return;
+      }
+      
+      if (!commandPlain) {
+        alert('请输入要执行的命令');
+        return;
+      }
+      
+      // 将命令编码为 Base64
+      const commandBase64 = btoa(unescape(encodeURIComponent(commandPlain)));
+      
+      resultSection.style.display = 'block';
+      resultContent.textContent = '正在执行命令...';
+      
+      const data = await apiCall('/Command/executeAsync', 'POST', {
+        server_id: serverId,
+        command: commandBase64
+      });
+      
+      if (data && data.data && data.data.command_uid) {
+        resultContent.textContent = \`命令已提交！\\n\\nCommand UID: \${data.data.command_uid}\\n\\n您可以使用此 UID 查询执行结果。\`;
+        
+        // 自动填充到获取结果的输入框
+        const cmdUidInput = document.getElementById('cmd-uid');
+        if (cmdUidInput) {
+          cmdUidInput.value = data.data.command_uid;
+        }
+        
+        alert('命令已成功提交！Command UID 已自动填充到查询框中。');
+      } else {
+        resultContent.textContent = '执行失败: ' + (data?.message || '未知错误');
+      }
+    }
+    
+    // 获取命令执行结果
+    async function getCommandResult() {
+      const commandUid = document.getElementById('cmd-uid').value.trim();
+      const outputBase64Select = document.getElementById('cmd-output-base64');
+      const outputBase64 = outputBase64Select.value; // 获取选中的值 "true" 或 "false"
+      const resultSection = document.getElementById('command-result');
+      const resultContent = document.getElementById('command-result-content');
+      const outputContainer = document.getElementById('cmd-output-container');
+      const outputTextarea = document.getElementById('cmd-output');
+      
+      if (!commandUid) {
+        alert('请输入命令 UID');
+        return;
+      }
+      
+      // 添加调试信息
+      console.log('选择的输出格式:', outputBase64, '类型:', typeof outputBase64);
+      
+      resultSection.style.display = 'block';
+      resultContent.textContent = '正在获取执行结果...';
+      
+      const data = await apiCall('/Command/getResult', 'POST', {
+        command_uid: commandUid,
+        output_base64: outputBase64  // 传递字符串 "true" 或 "false"
+      });
+      
+      if (data && data.data) {
+        let output = data.data.output || '';
+        let outputText = '';
+        let statusMessage = '';
+        
+        // 根据 output_base64 参数决定显示格式
+        if (outputBase64 === 'true') {
+          // 选择了 true，直接显示Base64编码内容
+          outputText = output;
+          statusMessage = \`执行状态: \${data.message || '完成'}\\n输出格式: Base64 编码\`;
+        } else {
+          // 选择了 false，显示纯文本输出
+          outputText = output;
+          statusMessage = \`执行状态: \${data.message || '完成'}\\n输出格式: 纯文本\`;
+        }
+        
+        // 在结果区域显示状态
+        resultContent.textContent = statusMessage + '\\n\\n✅ 已获取命令输出，详见下方文本框';
+        
+        // 在输出文本框中显示结果
+        outputTextarea.value = outputText || '(无输出)';
+        outputContainer.style.display = 'block';
+        
+        // 滚动到输出区域
+        outputContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        resultContent.textContent = '获取结果失败: ' + (data?.message || '未知错误');
+        outputContainer.style.display = 'none';
+      }
+    }
+    
+    // 复制命令输出
+    function copyCommandOutput() {
+      const outputTextarea = document.getElementById('cmd-output');
+      outputTextarea.select();
+      document.execCommand('copy');
+      alert('输出内容已复制到剪贴板');
+    }
+    
+    // 清空命令输出
+    function clearCommandOutput() {
+      const outputTextarea = document.getElementById('cmd-output');
+      const outputContainer = document.getElementById('cmd-output-container');
+      outputTextarea.value = '';
+      outputContainer.style.display = 'none';
     }
     
     function showResult(message, type = 'info') {
@@ -1431,8 +1678,13 @@ function getHTMLPage() {
         const formData = new FormData();
         if (body) {
           for (const [key, value] of Object.entries(body)) {
-            if (value !== null && value !== undefined && value !== '') {
-              formData.append(key, value);
+            // 允许空字符串和所有其他值,只过滤null和undefined
+            if (value !== null && value !== undefined) {
+              formData.append(key, String(value));
+              // 添加调试信息
+              if (key === 'output_base64') {
+                console.log('FormData添加 output_base64:', value, '转换后:', String(value));
+              }
             }
           }
         }
