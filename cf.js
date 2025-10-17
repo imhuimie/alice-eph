@@ -1214,6 +1214,11 @@ function getHTMLPage() {
             <button onclick="copyText('result-password')">复制</button>
           </div>
           
+          <div class="copy-field" id="result-boot-script-uid-container" style="display: none;">
+            <input type="text" id="result-boot-script-uid" readonly>
+            <button onclick="copyText('result-boot-script-uid')">复制</button>
+          </div>
+          
           <button onclick="copyAllInfo()" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); margin-top: 10px;">
             复制全部信息
           </button>
@@ -2031,7 +2036,8 @@ function getHTMLPage() {
           hostname: data.data.hostname,
           ipv4: data.data.ipv4,
           ipv6: data.data.ipv6,
-          password: data.data.password
+          password: data.data.password,
+          boot_script_uid: data.data.boot_script_uid // 新增参数
         };
         
         closeDeployModal();
@@ -2045,6 +2051,14 @@ function getHTMLPage() {
       document.getElementById('result-ipv4').value = 'IPv4地址：' + deployResult.ipv4;
       document.getElementById('result-ipv6').value = 'IPv6地址：' + deployResult.ipv6;
       document.getElementById('result-password').value = '登录密码：' + deployResult.password;
+
+      const bootScriptUidContainer = document.getElementById('result-boot-script-uid-container');
+      if (deployResult.boot_script_uid) {
+        document.getElementById('result-boot-script-uid').value = '启动脚本UID：' + deployResult.boot_script_uid;
+        bootScriptUidContainer.style.display = 'flex';
+      } else {
+        bootScriptUidContainer.style.display = 'none';
+      }
       
       document.getElementById('result-modal').classList.add('show');
     }
@@ -2065,10 +2079,14 @@ function getHTMLPage() {
     
     // 复制全部信息
     function copyAllInfo() {
-      const text = \`主机名：\${deployResult.hostname}
+      let text = \`主机名：\${deployResult.hostname}
 IPv4地址：\${deployResult.ipv4}
 IPv6地址：\${deployResult.ipv6}
 登录密码：\${deployResult.password}\`;
+
+      if (deployResult.boot_script_uid) {
+        text += \`\n启动脚本UID：\${deployResult.boot_script_uid}\`;
+      }
       
       const textarea = document.createElement('textarea');
       textarea.value = text;
@@ -2214,7 +2232,8 @@ IPv6地址：\${deployResult.ipv6}
           hostname: data.data.hostname || '未提供',
           ipv4: data.data.ipv4 || '未提供',
           ipv6: data.data.ipv6 || '未提供',
-          password: data.data.password || '未提供'
+          password: data.data.password || '未提供',
+          boot_script_uid: data.data.boot_script_uid // 新增参数
         };
         
         closeRebuildModal();
